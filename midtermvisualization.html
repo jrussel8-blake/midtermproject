@@ -1,0 +1,206 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Rocky Mountain National Park</title>
+
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.10.0/mapbox-gl.js"></script>
+
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        #elevation-slider-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #elevation-slider {
+            width: 200px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+
+    <div id="elevation-slider-container">
+        <label for="elevation-slider">Elevation (in ft):</label>
+        <input type="range" id="elevation-slider" min="8000" max="14500" step="100" value="14500">
+        <span id="elevation-value">14500 ft</span>
+    </div>
+
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoianJ1c3NlbDgiLCJhIjoiY203dzZ5aHhrMDJldTJscHNlN2pzemt0NyJ9.gMdQbO134qBSdPtF4D8sIw';  
+
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/jrussel8/cm8ut0nfh00wu01sndsx4fuye', 
+            center: [-105.6836, 40.3428],
+            zoom: 10 
+        });
+
+        map.on('load', function() {  
+            map.addLayer({
+                'id': 'Peaks',
+                'type': 'circle',
+                'source': {
+                    type: 'vector',
+                    url: 'mapbox://jrussel8.8kwl91th' 
+                },
+                'source-layer': 'map-3c5bmt', 
+                'layout': {
+                    'visibility': 'visible'
+                },
+                'paint': {
+                    'circle-color': [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'ELEV_IN_FT'],
+                        8000, '#ffffff', 
+                        14500, '#000000'
+                    ],
+                    'circle-stroke-color': [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'ELEV_IN_FT'],
+                        8000, '#000000',
+                        14500, '#ffffff'
+                    ],
+                    'circle-opacity': 1,
+                    'circle-stroke-width': {
+                        stops: [[8, 0.5], [100, 5], [500, 10]]
+                    },
+                    'circle-stroke-opacity': 1,
+                    'circle-radius': {
+                        property: 'ELEV_IN_FT',
+                        stops: [
+                            [{ zoom: 5, value: 8000 }, 1],
+                            [{ zoom: 5, value: 9000 }, 2],
+                            [{ zoom: 5, value: 10000 }, 3],
+                            [{ zoom: 5, value: 11500 }, 4],
+                            [{ zoom: 5, value: 14500 }, 8],  
+                            [{ zoom: 10, value: 8000 }, 2],
+                            [{ zoom: 10, value: 11000 }, 4],
+                            [{ zoom: 10, value: 12000 }, 6],
+                            [{ zoom: 10, value: 13000 }, 8],
+                            [{ zoom: 10, value: 13500 }, 10],
+                            [{ zoom: 10, value: 14500 }, 20],
+                            [{ zoom: 15, value: 8000 }, 2.5],
+                            [{ zoom: 15, value: 11000 }, 5],
+                            [{ zoom: 15, value: 12000 }, 7.5],
+                            [{ zoom: 15, value: 12500 }, 10],
+                            [{ zoom: 15, value: 13000 }, 12.5],
+                            [{ zoom: 15, value: 14500 }, 25],
+                        ]
+                    }
+                }
+            });
+
+            map.addLayer({
+                'id': 'continental_divide',
+                'type': 'line',
+                'source': {
+                    type: 'vector',
+                    url: 'mapbox://jrussel8.7g57f7z8' 
+                },
+                'source-layer': 'map-8w0n51', 
+                'paint': {
+                    'line-color': '#FF5733', 
+                    'line-width': 4
+                }
+            }, 'Peaks'); 
+
+            map.addLayer({
+                'id': 'new-line-layer',
+                'type': 'line',
+                'source': {
+                    type: 'vector',
+                    url: 'mapbox://jrussel8.aalc57qo'
+                },
+                'source-layer': 'map-07uxle',
+                'paint': {
+                    'line-color': [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'LENGTH'],
+                        0, '#ADD8E6',  
+                        2000, '#00008B' 
+                    ],
+                    'line-width': 3
+                }
+            }, 'Peaks'); 
+
+            map.on('click', 'new-line-layer', function(e) {
+                var coordinates = e.lngLat;
+                var feature = e.features[0];
+                var name = feature.properties.NAME || "Unknown Name";  // Assuming 'NAME' field
+                var length = feature.properties.LENGTH || "Unknown Length";  // Assuming 'LENGTH' field
+
+                new mapboxgl.Popup()
+                    .setLngLat(coordinates)
+                    .setHTML('<h3>' + name +  '</h3><p>Length: ' + length + ' ft</p>')
+                    .addTo(map);
+            });
+
+            map.on('mouseenter', 'new-line-layer', function() {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+
+            map.on('mouseleave', 'new-line-layer', function() {
+                map.getCanvas().style.cursor = '';
+            });
+
+            map.on('click', 'continental_divide', function(e) {
+                var coordinates = e.lngLat;
+
+                new mapboxgl.Popup()
+                    .setLngLat(coordinates)
+                    .setHTML('<h3>Continental Divide</h3>')
+                    .addTo(map);
+            });
+
+            map.on('mouseenter', 'continental_divide', function() {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+
+            map.on('mouseleave', 'continental_divide', function() {
+                map.getCanvas().style.cursor = '';
+            });
+
+            map.on('click', 'Peaks', function(e) {
+                var coordinates = e.lngLat;
+                var feature = e.features[0];
+                var peakFEATURE_NA = feature.properties.FEATURE_NA || "Unknown Peak";  
+                var elevation = feature.properties.ELEV_IN_FT;  
+
+                new mapboxgl.Popup()
+                    .setLngLat(coordinates)
+                    .setHTML('<h3>' + peakFEATURE_NA + '</h3><p>Elevation: ' + elevation + ' ft</p>')
+                    .addTo(map);
+            });
+
+            map.on('mouseenter', 'Peaks', function() {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+
+            map.on('mouseleave', 'Peaks', function() {
+                map.getCanvas().style.cursor = '';
+            });
+
+            document.getElementById('elevation-slider').addEventListener('input', function(event) {
+                var maxElevation = parseInt(event.target.value);
+                document.getElementById('elevation-value').innerText = maxElevation + ' ft'; 
+
+                map.setFilter('Peaks', ['<=', ['get', 'ELEV_IN_FT'], maxElevation]); 
+            });
+        });
+    </script>
+
+</body>
+</html>
